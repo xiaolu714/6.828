@@ -24,6 +24,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{"backtrace","Display backtrace info",mon_backtrace},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -57,7 +58,26 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
+	
 	// Your code here.
+	
+	//return 0;
+	uint32_t ebp,*p;
+	uint32_t eip;
+	struct Eipdebuginfo info;
+	ebp=read_ebp();    //获取当前ebp的值
+	while(ebp!=0){
+		p=(uint32_t *)ebp;  //将ebp类型转换为指针，赋值给p。
+		//cprintf("ebp %x eip %x args %08x %08x %08x %08x %08x \n",ebp,p[1],p[2],p[3],p[4],p[5],p[6]);
+		eip=p[1];
+		cprintf("ebp %x eip %x args %08x %08x %08x %08x %08x \n",ebp,eip,p[2],p[3],p[4],p[5],p[6]);
+		//print file infomation
+		debuginfo_eip(eip,&info);
+		int fn_offset=eip-info.eip_fn_addr;
+		cprintf("%s:%d: %.*s+%d\n",info.eip_file,info.eip_line,info.eip_fn_namelen,info.eip_fn_name,eip-info.eip_fn_addr);
+		
+		ebp=p[0];
+	}
 	return 0;
 }
 
@@ -114,7 +134,7 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
-
+	
 
 	while (1) {
 		buf = readline("K> ");
